@@ -15,10 +15,11 @@ for f in files:
     hdf_file = gdal.Open(path+f)
     subDatasets = hdf_file.GetSubDatasets()
     
-    # https://modis.gsfc.nasa.gov/data/dataprod/mod13.php
+    # open the DNB band
     dataset = gdal.Open(subDatasets[4][0])
     meta = dataset.GetMetadata_Dict()
     
+    # extract geolocation information from meta-data
     east = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_EastBoundingCoord'])
     west = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_WestBoundingCoord'])
     north = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_NorthBoundingCoord'])
@@ -29,6 +30,7 @@ for f in files:
     
     out_name = 'DATA/VIIRS_south_america_tif/H%d_V%d.tif' % (ht,vt)
     
+    # write to geo-tiff image
     driver = gdal.GetDriverByName("GTiff")
     out = driver.Create(out_name, 2400, 2400, 1, gdal.GDT_Float32)
     out.SetGeoTransform((west,10/2400,0,north,0,-10/2400))

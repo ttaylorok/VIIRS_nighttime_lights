@@ -1,7 +1,7 @@
-s1 = "https://ladsweb.modaps.eosdis.nasa.gov/archive/orders/501436095/"
+s1 = "https://ladsweb.modaps.eosdis.nasa.gov/archive/orders/501436358/"
 
-fin = open('south_america_2w_links.txt','r')
-fout = open('south_america_2w_dl_links.csv','w')
+fin = open('south_america_2w_v3_links.txt','r')
+fout = open('south_america_2w_v3_dl_links.csv','w')
 
 for line in fin:
     ls = line.split(',')

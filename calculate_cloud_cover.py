@@ -27,7 +27,7 @@ for f in files:
     # 4 = dnb radiance
     # 9 = lunar illumination
     # 11 = cloud mask
-    dataset = gdal.Open(subDatasets[4][0])
+    dataset = gdal.Open(subDatasets[11][0])
     meta = dataset.GetMetadata_Dict()
     
     east = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_EastBoundingCoord'])
@@ -41,6 +41,7 @@ for f in files:
     
     band = dataset.GetRasterBand(1)
     meta = band.GetMetadata_Dict()
+    break
     
     '''
     00 : confident clear
