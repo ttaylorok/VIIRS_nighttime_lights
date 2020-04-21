@@ -12,30 +12,31 @@ from bitstring import BitArray
 fmttypes = {'Byte':'B', 'UInt16':'H', 'Int16':'h', 'UInt32':'I', 
             'Int32':'i', 'Float32':'f', 'Float64':'d'}
 
+# read files
 path = 'DATA/VIIRS_himalayas/'
 files = []
 for filename in os.listdir(path):
     if filename.endswith(".h5"):
         files.append(filename)
 
-li = []
+# number of scanlines to read across all files
 chunk = 100
 output = np.ones([2400, 2400])
 rad_m = np.ones([chunk,len(files),2400])
 for r in np.arange(0,2400, chunk):
     print('CHUNK: %d' % (r))
     for f in np.arange(0,len(files)):
-        print(files[f])
         hdf_file = gdal.Open(path+files[f])
         subDatasets = hdf_file.GetSubDatasets()
         
-
+        # open radiance, lunar illumination, and cloud mask bands
         rad = gdal.Open(subDatasets[4][0])
         lum = gdal.Open(subDatasets[9][0])
         cloud = gdal.Open(subDatasets[11][0])
         
         meta = rad.GetMetadata_Dict()
         
+        # extract geoetry from headers
         east = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_EastBoundingCoord'])
         west = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_WestBoundingCoord'])
         north = int(meta['HDFEOS_GRIDS_VNP_Grid_DNB_NorthBoundingCoord'])
@@ -49,19 +50,13 @@ for r in np.arange(0,2400, chunk):
         lum_band = lum.GetRasterBand(1)
         cloud_band = cloud.GetRasterBand(1)
         
-        #meta = band.GetMetadata_Dict()
-        
         rad_BandType = gdal.GetDataTypeName(rad_band.DataType)
         lum_BandType = gdal.GetDataTypeName(lum_band.DataType)
         cloud_BandType = gdal.GetDataTypeName(cloud_band.DataType)
         
-        #cm = np.ones([band.YSize,band.XSize])
-        
-        #num_rejected = 0
-        
-        #for y in range(band.YSize): 
-        
         y = r
+        
+        # read in scanlines and store in rad_m matrix
         for c in np.arange(chunk):
             rad_scan = rad_band.ReadRaster(0,int(y + c),rad_band.XSize,1,rad_band.XSize,1,rad_band.DataType)
             lum_scan = lum_band.ReadRaster(0,int(y + c),lum_band.XSize,1,lum_band.XSize,1,rad_band.DataType)
@@ -70,27 +65,22 @@ for r in np.arange(0,2400, chunk):
             rad_values = struct.unpack(fmttypes[rad_BandType] * rad_band.XSize, rad_scan)
             lum_values = struct.unpack(fmttypes[lum_BandType] * lum_band.XSize, lum_scan)
             cloud_values = struct.unpack(fmttypes[cloud_BandType] * cloud_band.XSize, cloud_scan)
-            #print(rad_values)
             for i in np.arange(len(rad_values)):
                 cm = (cloud_values[i]  >> 5) & 3
                 if lum_values[i] <= 2000 and cm < 2.5 and rad_values[i] < 5000:
                     rad_m[c][f][i] = rad_values[i]
                 else:
                     rad_m[c][f][i] = np.nan
-            #break
+                    
+    # perform time averaging for each scanline
     for c in np.arange(chunk):
         output[r + c] = np.nanmean(rad_m[c], axis = 0)
         
-    #break
-    # for j in np.arange(2400):
-    #     output[r][j] = rad[:,i]
-    #break
-
+# write to tif file
 driver = gdal.GetDriverByName("GTiff")
 out = driver.Create('compiled_maxlim.tif', 2400, 2400, 1, gdal.GDT_Float32)
 out.SetGeoTransform((west,10/2400,0,north,0,-10/2400))
 rad.SetProjection("none")
-#x=dataset.ReadAsArray()
 out.GetRasterBand(1).WriteArray(output)
 rad.FlushCache()
             
